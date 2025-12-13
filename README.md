@@ -81,20 +81,21 @@ docker-compose up --build
 📁 Структура проекта
 text
 marketplace-generator/
-├── generator.py          # Основной генератор (всё здесь)
-├── README.md            # Этот файл
-├── .gitignore           # Что не коммитить
+marketplace-generator/
+├── generator.py # Основной генератор (всё здесь)
+├── README.md # Этот файл
+├── .gitignore # Что не коммитить
 │
-├── server/              # Веб-сервер (опционально)
-│   ├── server.py       # FastAPI приложение
-│   ├── requirements.txt # Зависимости
-│   └── Dockerfile      # Контейнеризация
+├── server/ # Веб-сервер (опционально)
+│ ├── server.py # FastAPI приложение
+│ ├── requirements.txt # Зависимости
+│ └── Dockerfile # Контейнеризация
 │
-├── config/              # Конфигурации (опционально)
-│   ├── config.yaml
-│   └── docker-compose.yml
+├── config/ # Конфигурации (опционально)
+│ ├── config.yaml
+│ └── docker-compose.yml
 │
-└── Makefile            # Команды для удобства
+└── Makefile # Команды для удобствава
 🎯 Для кого
 Разработчики: тестирование приложений
 
