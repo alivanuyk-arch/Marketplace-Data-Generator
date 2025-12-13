@@ -1,0 +1,18 @@
+# Python
+__pycache__/
+*.py[cod]
+venv/
+.env
+
+# Data
+data/
+*.parquet
+*.csv
+*.jsonl
+logs/
+
+# Docker
+*.tar
+
+# System
+.DS_Store
