@@ -1,0 +1,22 @@
+# config.yaml
+server:
+  host: "0.0.0.0"
+  port: 8000
+  workers: 4
+  log_level: "info"
+
+generator:
+  max_records_per_request: 100000
+  default_anomaly_rate: 0.15
+  save_to_file: true
+  output_dir: "./data"
+
+limits:
+  memory_mb: 512
+  max_concurrent_requests: 10
+  rate_limit_per_minute: 60
+
+monitoring:
+  enable: true
+  metrics_port: 9090
+  log_retention_days: 7
