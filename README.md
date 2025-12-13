@@ -78,24 +78,23 @@ bash
 docker-compose up --build
 Доступно по адресу: http://localhost:8000/docs
 
-📁 Структура проекта
-text
-marketplace-generator/
-marketplace-generator/
-├── generator.py # Основной генератор (всё здесь)
-├── README.md # Этот файл
-├── .gitignore # Что не коммитить
-│
-├── server/ # Веб-сервер (опционально)
-│ ├── server.py # FastAPI приложение
-│ ├── requirements.txt # Зависимости
-│ └── Dockerfile # Контейнеризация
-│
-├── config/ # Конфигурации (опционально)
-│ ├── config.yaml
-│ └── docker-compose.yml
-│
-└── Makefile # Команды для удобствава
+## 📁 Структура проекта
+
+**Основные файлы:**
+- `generator.py` - главный генератор (500 строк, работает из коробки)
+- `README.md` - эта документация
+- `.gitignore` - что не коммитить в Git
+- `Makefile` - команды для удобства
+
+**Сервер (опционально):**
+- `server/server.py` - FastAPI веб-сервер
+- `server/requirements.txt` - зависимости сервера
+- `server/Dockerfile` - контейнеризация
+
+**Конфигурации (опционально):**
+- `config/config.yaml` - настройки
+- `config/docker-compose.yml` - Docker Compose конфиг
+
 🎯 Для кого
 Разработчики: тестирование приложений
 
