@@ -1,18 +1,80 @@
+@"
 # Python
 __pycache__/
 *.py[cod]
+*$py.class
+*.so
+.Python
+env/
 venv/
-.env
+.venv/
+ENV/
+env.bak/
+venv.bak/
+pip-wheel-metadata/
+*.egg-info/
+.installed.cfg
+*.egg
 
-# Data
-data/
-*.parquet
-*.csv
-*.jsonl
-logs/
+# PyCharm
+.idea/
+*.iml
+out/
+
+# VS Code
+.vscode/
+!.vscode/settings.json
+!.vscode/tasks.json
+!.vscode/launch.json
+!.vscode/extensions.json
+*.code-workspace
+
+# OS
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+Desktop.ini
 
 # Docker
-*.tar
+data/
+logs/
+postgres_data/
+mlruns/
+kafka-logs/
+zookeeper-data/
+kafka-data/
 
-# System
-.DS_Store
+# Бинарные файлы
+*.parquet
+*.orc
+*.avro
+*.pickle
+*.pkl
+*.joblib
+
+# Логи
+*.log
+*.log.*
+
+# Конфиги (не коммитим персональные)
+config.local.*
+.env
+.secrets
+
+# Тестовые данные
+test_output/
+output/
+
+# Jupyter
+.ipynb_checkpoints
+*.ipynb
+
+# PySpark
+spark-warehouse/
+derby.log
+metastore_db/
+"@ | Out-File -FilePath .gitignore -Encoding UTF8
