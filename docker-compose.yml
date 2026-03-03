@@ -1,42 +1,106 @@
-services:
-  zookeeper:
-    image: confluentinc/cp-zookeeper:7.4.0
-    environment:
-      ZOOKEEPER_CLIENT_PORT: 2181
-      ZOOKEEPER_TICK_TIME: 2000
-    ports:
-      - "2181:2181"
-    volumes:
-      - zookeeper-data:/var/lib/zookeeper/data
-      - zookeeper-log:/var/lib/zookeeper/log
 
+    # "docker-compose"
+version: '3.8'
+
+services:
   kafka:
-    image: confluentinc/cp-kafka:7.4.0
-    depends_on:
-      - zookeeper
+    image: apache/kafka:4.0.0
+    container_name: kafka
     ports:
       - "9092:9092"
+      - "9093:9093"
     environment:
-      KAFKA_BROKER_ID: 1
-      KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
-      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://localhost:9092
-      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT
+      KAFKA_NODE_ID: 1
+      KAFKA_PROCESS_ROLES: broker,controller
+      KAFKA_CONTROLLER_QUORUM_VOTERS: 1@kafka:9093
+      KAFKA_LISTENERS: PLAINTEXT://0.0.0.0:9092,CONTROLLER://0.0.0.0:9093
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092  # ← ИЗМЕНИТЬ
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,CONTROLLER:PLAINTEXT
+      KAFKA_CONTROLLER_LISTENER_NAMES: CONTROLLER
       KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
+      KAFKA_NUM_PARTITIONS: 3
       KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
-      KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
-      KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
-      KAFKA_LOG_RETENTION_HOURS: 1
-    volumes:
-      - kafka-data:/var/lib/kafka/data
-    command: >
-      bash -c "
-      echo 'Очищаю Zookeeper от старых данных...' &&
-      kafka-topics --zookeeper zookeeper:2181 --delete --topic __consumer_offsets --if-exists || true &&
-      echo 'Запускаю Kafka...' &&
-      /etc/confluent/docker/run
-      "
+      CLUSTER_ID: "Mk3C1VdTQ_2xqNLyLBD6jA"
+      KAFKA_AUTO_CREATE_TOPICS_ENABLE: "true"
+      KAFKA_CREATE_TOPICS: "marketplace-data:3:1"
+   
+    networks:
+      - marketplace-net
 
+  clickhouse:
+    image: clickhouse/clickhouse-server:latest
+    container_name: clickhouse
+    ports:
+      - "8123:8123"
+      - "9000:9000"
+    volumes:
+      - clickhouse_data:/var/lib/clickhouse
+    environment:
+      CLICKHOUSE_DB: marketplace
+      CLICKHOUSE_USER: default
+      CLICKHOUSE_PASSWORD: sparkpass
+      CLICKHOUSE_DEFAULT_ACCESS_MANAGEMENT: 1
+    ulimits:
+      nofile:
+        soft: 262144
+        hard: 262144
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "-q", "http://localhost:8123/ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+    networks:
+      - marketplace-net
+
+  spark:
+    build:
+      context: .
+      dockerfile: Dockerfile.spark
+    image: apache/spark:3.5.5
+    container_name: spark
+    depends_on:
+      kafka:
+        condition: service_started
+      clickhouse:
+        condition: service_healthy
+    ports:
+      - "4040:4040"
+    volumes:
+      - ./spark_apps:/opt/spark-apps
+      - ./spark-cache:/home/spark/.ivy2
+    environment:
+      - SPARK_USER=default
+      - _JAVA_OPTIONS=-Duser.home=/home/spark
+    working_dir: /opt/spark
+    command: >
+      /opt/spark/bin/spark-submit
+      --master local[*]
+      --packages org.apache.spark:spark-sql-kafka-0-10_2.12:3.5.0
+      --conf spark.jars.ivy=/home/spark/.ivy2
+      /opt/spark-apps/spark_processor.py
+    networks:
+      - marketplace-net
+
+  generator:
+    build: .
+    container_name: generator
+    depends_on:
+      - kafka
+      - clickhouse 
+    volumes:
+      - .:/app
+    environment:
+      - KAFKA_SERVERS=kafka:9092
+    working_dir: /app
+    command: python main.py 
+
+    networks:
+      - marketplace-net
+   
+
+networks:
+  marketplace-net:
+    driver: bridge
+    
 volumes:
-  zookeeper-data:
-  zookeeper-log:
-  kafka-data:
+  clickhouse_data:

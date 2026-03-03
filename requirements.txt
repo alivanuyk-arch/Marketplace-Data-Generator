@@ -1,7 +1,10 @@
-# Для базового функционала ничего не нужно
-# Для экспорта в Parquet:
-# pandas>=2.0.0
-# pyarrow>=14.0.0
+# Для генератора
+kafka-python==2.0.2
+requests==2.31.0
+pandas==2.0.3
+aioitertools==0.11.0
 
-# Для CLI с аргументами:
-# argparse (встроен в Python)
+# Для Spark (устанавливается отдельно, но для локального теста)
+pyspark==3.5.0
+clickhouse-driver==0.2.6
+requests==2.31.0

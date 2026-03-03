@@ -1,151 +1,211 @@
-Marketplace Data Generator
-Простой генератор реалистичных данных маркетплейса.
-Один файл — 500 строк — готовые тестовые данные.
-🎯 Зачем я это сделал
-Этот проект создан для личного использования, чтобы:
+🛒 Marketplace Data Generator
+Генератор потоковых данных маркетплейса с отправкой в Kafka и обработкой в Spark + ClickHouse.
 
-1. Тестирование моих ETL пайплайнов
-Нужны были реалистичные данные с аномалиями
+🎯 История создания (зачем всё это)
+Всё началось с желания освоить новые технологии работы с потоковыми данными:
 
-Не хотел трогать продакшен
+🔍 Что искал
+Реалистичные потоковые данные для тренировки
 
-Хотел воспроизводимые сценарии
+Датасеты с разными сценариями (нормальные данные + аномалии)
 
-2. Эксперименты с обработкой данных
-Практика оптимизации пайплайнов
+Возможность тестировать ETL-пайплайны
 
-Тестирование алгоритмов детекции аномалий
+🤔 С чем столкнулся
+Доступ к данным — либо капчи, либо сложная юридическая волокита
 
-Бенчмаркинг разных подходов
+"Серый" вход — неофициальные API, которые могут закрыться в любой момент
 
-3. Обучение ИИ-агентов
-Создание тренировочных данных для ML моделей
+Статичные датасеты — CSV-файлы, а хотелось живой поток
 
-Симуляция реальных сценариев для автономных систем
+Отсутствие аномалий — все датасеты "стерильные", без ошибок
 
-Тестирование AI-generated ETL
+💡 Решение
+"А что, я же хотел стать профи, но я программист — сделаю сам! "
 
-📦 Что генерирует
-Реалистичные данные маркетплейса:
+🏗️ Архитектура
+text
+[Генератор] → [Kafka] → [Spark] → [ClickHouse]
+     ↑           ↑          ↑            ↑
+  Данные      Топик      Очистка      Хранилище
+  с мусором   "pipe"     Агрегация    (с характером)
+Компоненты:
+Генератор — создаёт поток данных с 13 типами аномалий
 
-Товары: смартфоны, ноутбуки, одежда и др.
+Kafka — транспортная шина (просто "труба")
 
-Цены: с учётом времени суток (ночью дешевле)
+Spark — разделение потоков, очистка, агрегация
 
-Остатки: популярные товары заканчиваются быстрее
-
-Рейтинги: 90% продавцов с высоким рейтингом
-
-Аномалии: 15 типов (SQL-инъекции, дубликаты, бинарный мусор и т.д.)
+ClickHouse — аналитическое хранилище (прошёл огонь и воду)
 
 🚀 Быстрый старт
-1. Простое использование (без установки):
-python
-from generator import UnifiedDataGenerator
-import asyncio
-
-async def main():
-    gen = UnifiedDataGenerator()
-    async for record in gen.generate_stream(1000):
-        print(record)  # Ваши данные
-
-asyncio.run(main())
-2. Через командную строку:
 bash
-# Генерация 10K записей
-python generator.py --count 10000 --format jsonl
+# 1. Клонировать репозиторий
+git clone https://github.com/yourname/marketplace-generator
+cd marketplace-generator
 
-# Только чистые данные
-python generator.py --count 5000 --format csv --no-anomalies
+# 2. Запустить инфраструктуру
+docker-compose up -d
 
-# Помощь
-python generator.py --help
-⚙️ Форматы вывода
-JSONL — потоковый JSON
+# 3. Запустить генератор
+python main.py
 
-CSV — табличный формат
-
-Parquet — для больших данных (нужен pandas+pyarrow)
-
-🐳 Docker (опционально)
-Запуск веб-сервера:
-bash
-cd server
-docker build -t marketplace-generator .
-docker run -p 8000:8000 marketplace-generator
-Или через docker-compose:
-bash
-docker-compose up --build
-Доступно по адресу: http://localhost:8000/docs
-
-## 📁 Структура проекта
-
-**Основные файлы:**
-- `generator.py` - главный генератор (500 строк, работает из коробки)
-- `README.md` - эта документация
-- `.gitignore` - что не коммитить в Git
-- `Makefile` - команды для удобства
-
-**Сервер (опционально):**
-- `server/server.py` - FastAPI веб-сервер
-- `server/requirements.txt` - зависимости сервера
-- `server/Dockerfile` - контейнеризация
-
-**Конфигурации (опционально):**
-- `config/config.yaml` - настройки
-- `config/docker-compose.yml` - Docker Compose конфиг
-
-🎯 Для кого
-Разработчики: тестирование приложений
-
-Data Engineers: тестирование ETL пайплайнов
-
-QA: нагрузочное тестирование
-
-Аналитики: создание дашбордов
-
-🤔 Зачем это нужно
-Когда нужны тестовые данные, а:
-
-Нет доступа к продакшен данным
-
-Нужны специфические сценарии (скидки, распродажи)
-
-Требуется генерация аномалий для тестирования
-
-Не хочется искать дампы в интернете
-
+# 4. Наблюдать магию
+docker logs spark --tail 50
 ⚡ Производительность
+Реальная скорость работы (проверено на практике)
+Генератор: ~12 записей/сек (оптимально для учебного проекта)
+
+Kafka: принимает поток без задержек
+
+Spark Streaming: обрабатывает в реальном времени
+
+ClickHouse: успешно сохраняет ~700-1000 записей в минуту
+
+Почему именно такая скорость?
+Генератор намеренно создаёт "рваный" поток для всестороннего тестирования:
+
+python
+# Механизмы создания нестабильного потока:
+delay = random.expovariate(50.0)  # Случайные задержки
+await asyncio.sleep(delay)        # Базовая пауза
+
+# 0.2% шанс на ДЛИННУЮ паузу (2-10 сек)
+if random.random() < 0.002:       # Имитация сетевых сбоев
+    long_delay = random.uniform(2.0, 10.0)
+    await asyncio.sleep(long_delay)
+
+# Каждые 1000 записей - пропуск (возвращает None)
+if self.counter % 1000 == 0:      # Проверка устойчивости
+    return None
+Зачем такие сложности?
+✅ Тестирование устойчивости Kafka при нестабильном потоке
+
+✅ Проверка таймаутов и реконнектов в Spark Streaming
+
+✅ Эмуляция реальных условий с переменной нагрузкой
+
+✅ Выявление узких мест в пайплайне
+
+📊 Типы аномалий (13 видов)
+Тип	Описание	Частота
+missing_fields	Пропущенные поля	3%
+extra_quotes	Лишние кавычки в строковых полях	2%
+duplicate	Дубликат последней нормальной записи	2%
+encoding_problem	Невалидные UTF-8 символы	1%
+future_timestamp	Дата из будущего (до 10 лет)	1%
+negative_price	Отрицательная цена	1%
+null_values	Все поля = None	1%
+sql_injection	SQL-инъекции в строковых полях	0.5%
+huge_price	Цена в 100-10000 раз выше	0.5%
+malformed_json	Битый JSON (возвращает строку)	1.5%
+binary_garbage	Бинарный мусор (возвращает bytes)	0.3%
+empty_record	Пустой словарь	0.5%
+data_gap	Пропуск записи (каждые 1000)	0.1%
+🏆 Главные победы
+🥇 Permission denied в ClickHouse (2 дня ада)
+Проблема:
+
 text
-✅ 10,000+ записей/сек
-✅ < 100 МБ RAM на 1,000,000 записей
-✅ Асинхронная потоковая генерация
-✅ Реалистичные задержки как в production
-🔧 Настройка
-Можно менять в коде:
+std::exception. Code: 1001, filesystem error: in rename: Permission denied
+Решение:
 
-Каталог товаров
+yaml
+# Замена bind mount на volume (это был ключ!)
+volumes:
+  - clickhouse_data:/var/lib/clickhouse  # ✅ РАБОТАЕТ!
+  # вместо ./clickhouse-data:/var/lib/clickhouse  # ❌ НЕ РАБОТАЕТ
+Урок: Docker на Windows + bind mount + ClickHouse = гремучая смесь
 
-Процент аномалий
+🥈 Kafka — создание топика
+yaml
+# Добавить в environment Kafka:
+KAFKA_CREATE_TOPICS: "marketplace-data:3:1"  # 3 партиции
+KAFKA_AUTO_CREATE_TOPICS_ENABLE: "true"
+📋 Полезные команды
+Проверка данных в ClickHouse
+bash
+# Сколько всего записей?
+docker exec clickhouse clickhouse-client --password sparkpass --query "SELECT COUNT(*) FROM marketplace.anomalies"
 
-Регионы пользователей
+# Типы аномалий
+docker exec clickhouse clickhouse-client --password sparkpass --query "SELECT anomaly_type, COUNT(*) FROM marketplace.anomalies GROUP BY anomaly_type ORDER BY COUNT(*) DESC" --format Pretty
 
-Маркетплейсы
+# Последние записи
+docker exec clickhouse clickhouse-client --password sparkpass --query "SELECT * FROM marketplace.anomalies ORDER BY timestamp DESC LIMIT 5" --format Pretty
 
-🐛 Если что-то не работает
-Проверь Python версию (3.10+)
+# Минутная статистика
+docker exec clickhouse clickhouse-client --password sparkpass --query "SELECT * FROM marketplace.minute_stats ORDER BY event_time DESC LIMIT 5" --format Pretty
+Мониторинг скорости
+bash
+# Скрипт для наблюдения в реальном времени
+while($true) {
+    $time = Get-Date -Format "HH:mm:ss"
+    $count = docker exec clickhouse clickhouse-client --password sparkpass --query "SELECT COUNT(*) FROM marketplace.anomalies" 2>$null
+    Write-Host "[$time] 📊 anomalies: $count"
+    Start-Sleep -Seconds 5
+}
+Логи компонентов
+bash
+# Генератор
+docker logs generator --tail 50
 
-Для Parquet: pip install pandas pyarrow
+# Spark
+docker logs spark --tail 50
 
-Для веб-сервера: pip install fastapi uvicorn
+# Kafka
+docker logs kafka --tail 50
 
-Или просто используй generator.py — он работает из коробки
+# ClickHouse
+docker logs clickhouse --tail 50
+🔧 Структура проекта
+text
+Marketplace-Data-Generator/
+├── 📄 docker-compose.yml      # Оркестрация всех сервисов
+├── 📄 Dockerfile              # Для генератора
+├── 📄 Dockerfile.spark        # Для Spark (с Python)
+├── 📄 generator.py            # Полный генератор данных
+├── 📄 main.py                 # Точка входа (генератор + продюсер)
+├── 📄 Marketplace_Producer.py # Kafka продюсер
+├── 📄 requirements.txt        # Зависимости Python
+├── 📄 README.md               # Этот файл
+├── 📁 spark_apps/             
+│   └── 📄 spark_processor.py  # Обработчик Spark
+└── 📁 clickhouse-data/        # Данные (игнорируется git)
+🛠 Технологии
+Python 3.11+ — генератор данных
+
+Apache Kafka 4.0.0 — транспортная шина
+
+Apache Spark 3.5.5 — потоковая обработка
+
+ClickHouse latest — аналитическое хранилище
+
+Docker + Docker Compose — контейнеризация
+
+📈 Результаты тестирования
+За время разработки (2 дня непрерывной борьбы):
+
+✅ ~2400+ записей в таблице anomalies
+
+✅ 13 типов аномалий успешно детектируются
+
+✅ 9 типов уже в базе (остальные добиваем)
+
+✅ Минутная статистика обновляется
+
+✅ Система стабильна под нагрузкой ~12 записей/сек
+
+💡 Выводы
+ClickHouse — мощный инструмент для аналитики, но:
+
+🔴 Требует правильной настройки в Docker
+
+🔴 Не прощает ошибок с файловой системой
+
+✅ После правильной настройки работает как часы
+
+2 дня мучений — бесценный опыт! 💪
 
 📄 Лицензия
-MIT — используй как хочешь.
-
-💡 Совет
-Начни с generator.py — этого достаточно для 90% задач.
-Остальное — опциональные плюшки.
-
-Сгенерировал данные → использовал → забыл.
+MIT — берите, пробуйте, мучайтесь, прокачивайтесь!

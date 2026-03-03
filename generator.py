@@ -392,7 +392,7 @@ class MarketplaceDataGenerator:
             
             if record is not None:
                 yield record
-                generated += 1
+                generated += 1  
     
     def save_anomaly_log(self, filename: str = "anomalies.jsonl"):
         """Сохранение лога аномалий"""
