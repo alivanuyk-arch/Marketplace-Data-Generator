@@ -5,12 +5,12 @@ import asyncio
 import json
 from datetime import datetime
 from typing import Optional
-import marketplace_generator  # наш генератор
+import marketplace_generator  
 import uvicorn
 
 app = FastAPI(title="Marketplace Data Generator API", version="1.0")
 
-# Разрешаем CORS
+
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -18,13 +18,13 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Глобальный счётчик
+
 generated_total = 0
 start_time = datetime.now()
 
 @app.get("/")
 async def root():
-    """Информация о сервере"""
+    
     return {
         "service": "Marketplace Data Generator",
         "version": "1.0",
@@ -44,25 +44,18 @@ async def generate_data(
     format: str = "json",
     anomaly_rate: Optional[float] = None,
     output: Optional[str] = None
-):
-    """
-    Генерация данных
+    ):
     
-    - count: количество записей (макс 100000)
-    - format: json, csv, jsonl
-    - anomaly_rate: процент аномалий (0.0-1.0)
-    - output: имя файла для сохранения
-    """
     global generated_total
     
-    # Ограничения
+    
     if count > 100000:
         raise HTTPException(status_code=400, detail="Максимум 100000 записей за запрос")
     
     if anomaly_rate is not None and not 0 <= anomaly_rate <= 1:
         raise HTTPException(status_code=400, detail="anomaly_rate должен быть между 0 и 1")
     
-    # Настраиваем профиль аномалий если нужно
+    
     anomaly_profile = None
     if anomaly_rate is not None:
         anomaly_profile = {
@@ -146,7 +139,7 @@ async def generate_data(
 
 @app.get("/stream")
 async def stream_data(count: int = 1000):
-    """Server-Sent Events поток данных"""
+    
     async def event_stream():
         generator = marketplace_generator.UnifiedDataGenerator()
         
@@ -169,7 +162,7 @@ async def stream_data(count: int = 1000):
 
 @app.get("/health")
 async def health_check():
-    """Проверка здоровья сервера"""
+    
     return {
         "status": "healthy",
         "timestamp": datetime.now().isoformat(),
@@ -179,7 +172,7 @@ async def health_check():
 
 @app.get("/stats")
 async def get_stats():
-    """Статистика генерации"""
+    
     return {
         "total_generated": generated_total,
         "requests_per_minute": generated_total / max((datetime.now() - start_time).total_seconds() / 60, 1),
@@ -194,7 +187,7 @@ async def generate_to_file(
     format: str = "parquet",
     filename: Optional[str] = None
 ):
-    """Генерация данных в файл (асинхронно)"""
+    
     if filename is None:
         filename = f"data_{datetime.now().strftime('%Y%m%d_%H%M%S')}.{format}"
     
@@ -204,7 +197,7 @@ async def generate_to_file(
         elif format == "jsonl":
             await marketplace_generator.export_to_jsonl(filename, count)
     
-    # Запускаем в фоне
+    
     background_tasks.add_task(generate_async)
     
     return {

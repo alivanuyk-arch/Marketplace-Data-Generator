@@ -1,10 +1,7 @@
-# Для генератора
 kafka-python==2.0.2
 requests==2.31.0
 pandas==2.0.3
 aioitertools==0.11.0
-
-# Для Spark (устанавливается отдельно, но для локального теста)
 pyspark==3.5.0
 clickhouse-driver==0.2.6
 requests==2.31.0

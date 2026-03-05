@@ -6,10 +6,7 @@ from typing import Dict, Any, Optional, Union, Callable
 import struct
 from aioitertools import enumerate as aenumerate
 
-# ------------------------------------------------------------
-# 1. ПОЛНЫЙ КОНФИГ (все параметры)
-# ------------------------------------------------------------
-
+# параметры можно добить вынес для расширения
 PRODUCT_CATALOG = [
     {
         "id": "PH_001",
@@ -29,7 +26,7 @@ PRODUCT_CATALOG = [
 
 MARKETPLACES = ["Wildberries", "Ozon", "Яндекс.Маркет", "СберМегаМаркет"]
 
-# ВСЕ аномалии как в оригинале
+
 ANOMALY_CONFIG = {
     "normal": (0.85, "generate_normal"),
     "missing_fields": (0.03, "anomaly_missing_fields"),
@@ -46,45 +43,41 @@ ANOMALY_CONFIG = {
     "empty_record": (0.005, "anomaly_empty_record")
 }
 
-# ------------------------------------------------------------
-# 2. БАЗОВЫЕ ГЕНЕРАТОРЫ (с полной логикой)
-# ------------------------------------------------------------
 
 def _generate_price_with_time_logic(product: Dict) -> int:
-    """Цена с учетом времени суток (как в оригинале)"""
+    
     min_price, max_price = product["price_range"]
     base_price = random.randint(min_price, max_price)
     
     hour = datetime.now().hour
-    if 0 <= hour < 6:      # Ночью дешевле
+    if 0 <= hour < 6:      
         price_mod = random.uniform(0.95, 1.0)
-    elif 20 <= hour <= 23: # Вечером дороже
+    elif 20 <= hour <= 23: 
         price_mod = random.uniform(1.0, 1.05)
-    else:                  # Днем нормально
+    else:                 
         price_mod = random.uniform(0.98, 1.02)
     
     return int(base_price * price_mod)
 
 def _generate_stock_with_popularity(product: Dict) -> int:
-    """Остаток с учетом популярности товара"""
+
     min_stock, max_stock = product["stock_range"]
     stock = random.randint(min_stock, max_stock)
     
-    # Популярные товары быстрее заканчиваются
     if product["category"] == "Электроника":
         stock = max(1, stock - random.randint(0, 10))
     
     return stock
 
 def _generate_seller_rating() -> float:
-    """Рейтинг продавца (10% с низким рейтингом)"""
-    if random.random() < 0.1:  # 10% продавцов с низким рейтингом
+    
+    if random.random() < 0.1:  
         return round(random.uniform(2.0, 3.5), 1)
     return round(random.uniform(4.0, 5.0), 1)
 
 async def generate_product_component() -> Dict[str, Any]:
-    """Генерация данных товара (async с задержкой)"""
-    await asyncio.sleep(0.001)  # Имитация async-операции
+    
+    await asyncio.sleep(0.001)  
     
     product = random.choice(PRODUCT_CATALOG)
     
@@ -97,7 +90,7 @@ async def generate_product_component() -> Dict[str, Any]:
     }
 
 async def generate_marketplace_component() -> Dict[str, Any]:
-    """Генерация данных площадки"""
+    
     await asyncio.sleep(0.001)
     
     return {
@@ -108,8 +101,7 @@ async def generate_marketplace_component() -> Dict[str, Any]:
     }
 
 def generate_base_metadata(counter: int) -> Dict[str, Any]:
-    """Базовая метаинформация записи"""
-    # Временная метка с "дрейфом" ±2 минуты
+    
     time_offset = random.randint(-120, 120)
     timestamp = (datetime.now() + timedelta(seconds=time_offset)).isoformat()
     
@@ -122,12 +114,8 @@ def generate_base_metadata(counter: int) -> Dict[str, Any]:
         }
     }
 
-# ------------------------------------------------------------
-# 3. ГЕНЕРАТОРЫ АНОМАЛИЙ (ВСЕ как в оригинале)
-# ------------------------------------------------------------
-
 async def generate_normal(counter: int, last_normal_record: Dict = None) -> Dict[str, Any]:
-    """Нормальная запись (полная логика)"""
+    
     record = generate_base_metadata(counter)
     record.update(await generate_product_component())
     record.update(await generate_marketplace_component())
@@ -135,7 +123,7 @@ async def generate_normal(counter: int, last_normal_record: Dict = None) -> Dict
     return record
 
 async def anomaly_missing_fields(counter: int, last_normal_record: Dict) -> Dict[str, Any]:
-    """Пропущенные поля (удаляем 1-3 случайных поля)"""
+    
     record = await generate_normal(counter, last_normal_record)
     
     fields = [k for k in record.keys() 
@@ -150,15 +138,15 @@ async def anomaly_missing_fields(counter: int, last_normal_record: Dict) -> Dict
     return record
 
 async def anomaly_extra_quotes(counter: int, last_normal_record: Dict) -> Dict[str, Any]:
-    """Лишние кавычки в строковых полях"""
+    
     record = await generate_normal(counter, last_normal_record)
     
     for key in ["product_name", "category", "user_region"]:
         if key in record and record[key]:
             if random.random() < 0.5:
-                record[key] = f'"{record[key]}"'  # Кавычки вокруг
+                record[key] = f'"{record[key]}"'  
             else:
-                record[key] = f'{record[key]}""'  # Двойные кавычки в конце
+                record[key] = f'{record[key]}""'  
     
     record["data_quality"] = "extra_quotes"
     return record
@@ -195,29 +183,28 @@ async def anomaly_future_timestamp(counter: int, last_normal_record: Dict) -> Di
     return record
 
 async def anomaly_malformed_json(counter: int, last_normal_record: Dict) -> str:
-    """Битый JSON (возвращает строку!)"""
+    
     errors = [
-        '{"id": "bad_json", "product": "Тест", "price": 100,}',  # Лишняя запятая
-        '{id: "no_quotes", product: "Тест"}',  # Нет кавычек у ключей
-        '{"id": "test" "price": 100}',  # Нет запятой
-        '{"id": "test"'  # Незакрытый JSON
+        '{"id": "bad_json", "product": "Тест", "price": 100,}',  
+        '{id: "no_quotes", product: "Тест"}', 
+        '{"id": "test" "price": 100}',  
+        '{"id": "test"' 
     ]
     return random.choice(errors)
 
 async def anomaly_duplicate(counter: int, last_normal_record: Dict) -> Optional[Dict[str, Any]]:
-    """Дубликат последней нормальной записи"""
+    
     if last_normal_record:
         record = last_normal_record.copy()
         record["record_id"] = f"{record['record_id']}_dup"
         record["data_quality"] = "duplicate"
         return record
-    return None  # Если нет последней нормальной
+    return None  
 
 async def anomaly_null_values(counter: int, last_normal_record: Dict) -> Dict[str, Any]:
-    """Все поля = None"""
+    
     record = generate_base_metadata(counter)
     
-    # Все основные поля = None
     fields = ["product_id", "product_name", "category", "price_rub", 
               "stock", "seller_rating", "marketplace", "user_region"]
     
@@ -228,7 +215,7 @@ async def anomaly_null_values(counter: int, last_normal_record: Dict) -> Dict[st
     return record
 
 async def anomaly_sql_injection(counter: int, last_normal_record: Dict) -> Dict[str, Any]:
-    """SQL-инъекция в строковые поля"""
+    
     record = await generate_normal(counter, last_normal_record)
     
     injections = [
@@ -238,7 +225,7 @@ async def anomaly_sql_injection(counter: int, last_normal_record: Dict) -> Dict[
         "<script>alert('xss')</script>"
     ]
     
-    # Вставляем в случайное строковое поле
+    
     text_fields = [k for k, v in record.items() 
                   if isinstance(v, str) and k not in ["record_id", "data_quality", "_metadata"]]
     
@@ -250,25 +237,24 @@ async def anomaly_sql_injection(counter: int, last_normal_record: Dict) -> Dict[
     return record
 
 async def anomaly_binary_garbage(counter: int, last_normal_record: Dict) -> bytes:
-    """Бинарный мусор (возвращает bytes!)"""
-    # Генерируем случайные байты
+    
     return bytes([random.randint(0, 255) for _ in range(50)])
 
 async def anomaly_encoding_problem(counter: int, last_normal_record: Dict) -> Dict[str, Any]:
-    """Проблемы с кодировкой UTF-8"""
+    
     record = await generate_normal(counter, last_normal_record)
     
-    # Добавляем невалидные UTF-8 символы
+    
     problem_chars = []
     for _ in range(5):
         if random.random() < 0.3:
-            # Невалидные суррогаты
+            
             problem_chars.append(chr(random.randint(0xD800, 0xDFFF)))
         else:
-            # Управляющие символы
+            
             problem_chars.append(chr(random.randint(0x00, 0x1F)))
     
-    # Вставляем в строковое поле
+    
     if "product_name" in record:
         record["product_name"] = "Товар" + "".join(problem_chars)
     
@@ -276,15 +262,12 @@ async def anomaly_encoding_problem(counter: int, last_normal_record: Dict) -> Di
     return record
 
 async def anomaly_empty_record(counter: int, last_normal_record: Dict) -> Dict[str, Any]:
-    """Пустая запись"""
+    
     return {}
 
-# ------------------------------------------------------------
-# 4. ДИСПЕТЧЕР С ПОЛНОЙ ЛОГИКОЙ (включая сбои)
-# ------------------------------------------------------------
 
 class MarketplaceDataGenerator:
-    """Полнофункциональный генератор (как оригинал, но с чистой архитектурой)"""
+    
     
     def __init__(self, anomaly_config=None):
         self.counter = 0
@@ -292,7 +275,7 @@ class MarketplaceDataGenerator:
         self.anomaly_log = []
         self.config = anomaly_config or ANOMALY_CONFIG
         
-        # Регистрируем ВСЕ генераторы
+       
         self.generators = {
             "generate_normal": generate_normal,
             "anomaly_missing_fields": anomaly_missing_fields,
@@ -310,7 +293,7 @@ class MarketplaceDataGenerator:
         }
     
     def _choose_generator(self) -> tuple:
-        """Выбор типа записи по вероятностям"""
+        
         r = random.random()
         cumulative = 0.0
         
@@ -322,10 +305,10 @@ class MarketplaceDataGenerator:
         return "normal", generate_normal
     
     async def generate_record(self) -> Optional[Union[Dict[str, Any], str, bytes]]:
-        """Генерация одной записи с имитацией сбоев"""
+        
         self.counter += 1
         
-        # Имитация сбоя (каждые 1000 записей) - как в оригинале
+        
         if self.counter % 1000 == 0:
             self.anomaly_log.append({
                 "counter": self.counter,
@@ -334,24 +317,24 @@ class MarketplaceDataGenerator:
             })
             return None
         
-        # Выбор типа записи
+        
         anomaly_type, generator_func = self._choose_generator()
         
-        # Генерация
+        
         try:
             record = await generator_func(self.counter, self.last_normal_record)
             
-            # Для дубликата может вернуться None
+            
             if record is None and anomaly_type == "duplicate":
-                # Если нет последней нормальной - генерируем нормальную
+                
                 record = await generate_normal(self.counter, self.last_normal_record)
                 anomaly_type = "normal"
             
-            # Сохраняем последнюю нормальную для дубликатов
+            
             if anomaly_type == "normal" and isinstance(record, dict):
                 self.last_normal_record = record.copy()
             
-            # Логируем аномалии (кроме normal)
+            
             if anomaly_type != "normal" and record is not None:
                 record_id = record.get("record_id", "unknown") if isinstance(record, dict) else "non_dict"
                 self.anomaly_log.append({
@@ -364,7 +347,7 @@ class MarketplaceDataGenerator:
             return record
             
         except Exception as e:
-            # Логируем ошибки генерации
+            
             self.anomaly_log.append({
                 "counter": self.counter,
                 "type": "generation_error",
@@ -374,20 +357,20 @@ class MarketplaceDataGenerator:
             return None
     
     async def generate_stream(self, records_to_generate: int = 10000):
-        """Поток данных с реалистичными задержками и сбоями"""
+        
         generated = 0
         
         while generated < records_to_generate:
-            # Реалистичная задержка (в среднем 20 записей/сек) как в оригинале
+            
             delay = random.expovariate(50.0)
             await asyncio.sleep(delay)
             
-            # 0.2% шанс на длинную паузу (имитация сетевого сбоя)
+            
             if random.random() < 0.002:
                 long_delay = random.uniform(2.0, 10.0)
                 await asyncio.sleep(long_delay)
             
-            # Генерация записи
+            
             record = await self.generate_record()
             
             if record is not None:
@@ -395,7 +378,7 @@ class MarketplaceDataGenerator:
                 generated += 1  
     
     def save_anomaly_log(self, filename: str = "anomalies.jsonl"):
-        """Сохранение лога аномалий"""
+        
         with open(filename, "w", encoding="utf-8") as f:
             for anomaly in self.anomaly_log:
                 f.write(json.dumps(anomaly, ensure_ascii=False) + "\n")

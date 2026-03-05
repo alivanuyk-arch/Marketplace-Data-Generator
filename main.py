@@ -1,5 +1,3 @@
-#вход
-
 import asyncio
 import argparse
 import signal
@@ -9,11 +7,12 @@ import time
 from datetime import datetime
 from Marketplace_Producer import KafkaMarketplaceProducer
 from generator import MarketplaceDataGenerator
+from logger import logger
 
 
 class DataPipeline:
     def __init__(self, bootstrap_servers=None, topic='marketplace-data'):
-        # Приоритет: аргумент > переменная окружения > значение по умолчанию
+        
         if bootstrap_servers is None:
             bootstrap_servers = os.getenv('KAFKA_SERVERS', 'kafka:9092')
         
@@ -29,37 +28,35 @@ class DataPipeline:
         signal.signal(signal.SIGTERM, self.stop)
     
     def stop(self, *args):
-        print("\n\n🛑 Получен сигнал остановки...")
+        
         self.running = False
     
     async def connect_kafka_with_retry(self, max_retries=10):
-        """Подключение к Kafka с повторными попытками"""
+        
         for attempt in range(max_retries):
             try:
-                print(f"🔧 Попытка {attempt+1}/{max_retries} подключения к Kafka...")
+                logger.info(f"Попытка {attempt+1}/{max_retries} подключения к Kafka")
                 self.producer = KafkaMarketplaceProducer(self.bootstrap_servers)
-                print(f"✅ Подключено к Kafka на {self.bootstrap_servers}")
+                logger.info(f"Подключено к Kafka на {self.bootstrap_servers}")
                 return True
             except Exception as e:
-                print(f"⚠️ Ошибка: {e}")
+                logger.info(f"Ошибка: {e}")
                 if attempt < max_retries - 1:
                     wait_time = 3 * (attempt + 1)
-                    print(f"⏳ Жду {wait_time} сек...")
+                    logger.info(f"Жду {wait_time} сек")
                     await asyncio.sleep(wait_time)
         return False
     
     async def run(self, count: int = None):
-        print("=" * 70)
-        print("🚀 DATA PIPELINE: Генератор → Kafka")
-        print("=" * 70)
-        print(f"📤 Брокер: {self.bootstrap_servers}")
-        print(f"📤 Топик: {self.topic}")
-        print(f"📊 Режим: {'Бесконечный' if count is None else f'{count} записей'}")
-        print("=" * 70)
         
-        # Подключаемся к Kafka
+        logger.info(f" Брокер: {self.bootstrap_servers}")
+        logger.info(f" Топик: {self.topic}")
+        logger.info(f" Режим: {'Бесконечный' if count is None else f'{count} записей'}")
+        
+        
+        
         if not await self.connect_kafka_with_retry():
-            print("❌ Не удалось подключиться к Kafka")
+            logger.error("Не удалось подключиться к Kafka")
             return
         
         self.start_time = datetime.now()
@@ -96,24 +93,23 @@ class DataPipeline:
             self.total_sent += 1
             
         except Exception as e:
-            print(f"⚠️ Ошибка обработки записи {self.total_sent}: {e}")
+            logger.error(f"Ошибка обработки записи {self.total_sent}: {e}")
     
     async def _print_stats(self):
         elapsed = (datetime.now() - self.start_time).total_seconds()
         rate = self.total_sent / elapsed if elapsed > 0 else 0
-        print(f"📊 Статус: {self.total_sent} записей | {rate:.1f} записей/сек")
+        logger.info(f"Статус: {self.total_sent} записей | {rate:.1f} записей/сек")
     
     async def _shutdown(self):
-        print("\n🔄 Завершение работы...")
+        logger.info("Завершение работы")
         if self.producer:
             self.producer.close()
         
         elapsed = (datetime.now() - self.start_time).total_seconds()
-        print("\n" + "=" * 70)
-        print("📈 ФИНАЛЬНАЯ СТАТИСТИКА")
-        print(f"   Всего отправлено: {self.total_sent}")
-        print(f"   Время работы: {elapsed:.1f} сек")
-        print("=" * 70)
+        
+        logger.info(f"Всего отправлено: {self.total_sent}")
+        logger.info(f"Время работы: {elapsed:.1f} сек")
+        
 
 def main():
     parser = argparse.ArgumentParser()
@@ -131,9 +127,9 @@ def main():
     try:
         asyncio.run(pipeline.run(count=args.count))
     except KeyboardInterrupt:
-        print("\n\n👋 Программа прервана")
+        logger.error("Программа прервана пользователем")
     except Exception as e:
-        print(f"\n💥 Ошибка: {e}")
+        logger.error(f"Ошибка: {e}")
         return 1
     
     return 0
