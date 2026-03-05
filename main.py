@@ -43,7 +43,6 @@ class DataPipeline:
                 logger.info(f"Ошибка: {e}")
                 if attempt < max_retries - 1:
                     wait_time = 3 * (attempt + 1)
-                    logger.info(f"Жду {wait_time} сек")
                     await asyncio.sleep(wait_time)
         return False
     
